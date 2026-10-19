@@ -1,0 +1,51 @@
+####################################################
+## mCD.view
+##
+## MMMC for mon-CHERI-DMA on ASAP7
+## library_sets -> timing_condition -> delay_corner
+####################################################
+
+foreach __v {SDC_FILE ASAP7_LIB_SS ASAP7_LIB_TT ASAP7_LIB_FF ASAP7_QRC} {
+    if {![info exists $__v]} {
+        error "mCD.view: '$__v' is not defined but pnr.tcl must export it before read_mmmc"
+    }
+}
+if {![file exists $SDC_FILE]} {
+    error "mCD.view: SDC_FILE '$SDC_FILE' does not exist"
+}
+unset __v
+
+# Library sets
+create_library_set -name libs_ss -timing $ASAP7_LIB_SS
+create_library_set -name libs_tt -timing $ASAP7_LIB_TT
+create_library_set -name libs_ff -timing $ASAP7_LIB_FF
+
+# RC corners
+create_rc_corner -name rc_ss \
+    -qrc_tech "$ASAP7_QRC/qrcTechFile_typ03_scaled4xV06" -temperature 100
+create_rc_corner -name rc_tt \
+    -qrc_tech "$ASAP7_QRC/qrcTechFile_typ03_scaled4xV06" -temperature 25
+create_rc_corner -name rc_ff \
+    -qrc_tech "$ASAP7_QRC/qrcTechFile_typ03_scaled4xV06" -temperature 0
+
+# Timing conditions
+create_timing_condition -name tc_ss -library_sets {libs_ss}
+create_timing_condition -name tc_tt -library_sets {libs_tt}
+create_timing_condition -name tc_ff -library_sets {libs_ff}
+
+# Delay corners
+create_delay_corner -name dc_setup -timing_condition {tc_ss} -rc_corner rc_ss
+create_delay_corner -name dc_typ   -timing_condition {tc_tt} -rc_corner rc_tt
+create_delay_corner -name dc_hold  -timing_condition {tc_ff} -rc_corner rc_ff
+
+# Constraint mode
+create_constraint_mode -name cm_func -sdc_files [list $SDC_FILE]
+
+# Analysis views
+create_analysis_view -name av_setup -constraint_mode cm_func -delay_corner dc_setup
+create_analysis_view -name av_typ   -constraint_mode cm_func -delay_corner dc_typ
+create_analysis_view -name av_hold  -constraint_mode cm_func -delay_corner dc_hold
+
+# Initial views with pnr.tcl selecting the final setup corner (PNR_CORNER)
+# right after init_design.
+set_analysis_view -setup {av_setup} -hold {av_hold}
