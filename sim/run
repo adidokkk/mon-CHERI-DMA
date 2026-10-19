@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Baseline: CHERI_EN = 0
+vlog +define+MCD_CHERI_EN=0        \
+     ../rtl/mCD_pkg.sv             \
+     ../rtl/ibex_bus.sv            \
+     ../rtl/mCD_busM.sv            \
+     ../rtl/mCD_mmr.sv             \
+     ../rtl/mCD.sv                 \
+     mCD_tb.sv
+vsim -c -quiet -voptargs="+acc" +questa_mvc_core+wlf_disable mCD_tb +vcdfile=BASE__mCD_tb.vcd -nostdout -l BASE__mCD_tb.log -do "run -all; quit"
+rm -rf work
+
+# CHERI: CHERI_EN = 1
+vlog +define+MCD_CHERI_EN=1        \
+     ../rtl/mCD_pkg.sv             \
+     ../rtl/ibex_bus.sv            \
+     ../rtl/mCD_busM.sv            \
+     ../rtl/mCD_capCheck.sv        \
+     ../rtl/mCD_capDec.sv          \
+     ../rtl/mCD_mmr.sv             \
+     ../rtl/mCD.sv                 \
+     mCD_tb.sv
+vsim -c -quiet -voptargs="+acc" +questa_mvc_core+wlf_disable mCD_tb +vcdfile=CHERI__mCD_tb.vcd -nostdout -l CHERI__mCD_tb.log -do "run -all; quit"
+
+rm -f *.dbg
+rm -rf work
